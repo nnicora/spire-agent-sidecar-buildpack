@@ -79,7 +79,7 @@ func New(stager Stager, manifest Manifest, installer Installer, logger *libbuild
 func (s *Supplier) Run() error {
 	s.Log.BeginStep("Supplying spire")
 
-	if err := s.InstallCertificates(); err != nil {
+	if err := s.Copy("certificates", "certificates"); err != nil {
 		s.Log.Error("Failed to copy certificates; %s", err.Error())
 		return err
 	}
@@ -89,13 +89,8 @@ func (s *Supplier) Run() error {
 		return err
 	}
 
-	if err := s.Install("binaries"); err != nil {
+	if err := s.Copy("bin", "binaries"); err != nil {
 		s.Log.Error("Failed to copy binaries; %s", err.Error())
-		return err
-	}
-
-	if err := s.Install("binaries", "plugins"); err != nil {
-		s.Log.Error("Failed to copy plugins; %s", err.Error())
 		return err
 	}
 
@@ -112,41 +107,17 @@ func (s *Supplier) Run() error {
 	return nil
 }
 
-func (s *Supplier) InstallCertificates() error {
-	pluginsDir := filepath.Join(s.Manifest.RootDir(), "certificates")
-
-	err := filepath.Walk(pluginsDir, func(srcPath string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-		if err != nil {
-			s.Log.Error("Can't copy certificate: %s", err.Error())
-			return err
-		}
-		dstPath := filepath.Join(s.Stager.DepDir(), "certificates", info.Name())
-		if errCopy := libbuildpack.CopyFile(srcPath, dstPath); errCopy != nil {
-			s.Log.Error("Can't copy file: %s; Source `%s`, destination `%s`", errCopy.Error(), srcPath, dstPath)
-			return errCopy
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Supplier) Install(locations ...string) error {
-	paths := make([]string, 0, len(locations)+1)
+func (s *Supplier) Copy(dst string, srcs ...string) error {
+	paths := make([]string, 0, len(srcs)+1)
 	paths = append(paths, s.Manifest.RootDir())
 
-	for _, location := range locations {
+	for _, location := range srcs {
 		paths = append(paths, location)
 	}
 
-	pluginsDir := filepath.Join(paths...)
+	dir := filepath.Join(paths...)
 
-	err := filepath.Walk(pluginsDir, func(srcPath string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(srcPath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -154,7 +125,7 @@ func (s *Supplier) Install(locations ...string) error {
 			s.Log.Error("Can't copy file: %s", err.Error())
 			return err
 		}
-		dstPath := filepath.Join(s.Stager.DepDir(), "bin", info.Name())
+		dstPath := filepath.Join(s.Stager.DepDir(), dst, info.Name())
 		if errCopy := libbuildpack.CopyFile(srcPath, dstPath); errCopy != nil {
 			s.Log.Error("Can't copy file: %s; Source `%s`, destination `%s`", errCopy.Error(), srcPath, dstPath)
 			return errCopy
