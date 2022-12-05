@@ -1,5 +1,5 @@
 - type: "svid-file-script"
-  command: "/home/vcap/deps/{{ .Idx }}/bin/svid-file.sh"
+  command: "while (true); do echo "Refresh SVID"; /home/vcap/deps/{{ .Idx }}/bin/spire-agent api fetch x509 -socketPath /tmp/spire-agent/public/api.sock -write /tmp/spire-agent; sleep 10; done"
   platforms:
     cloudfoundry:
       sidecar_for: [ "web"]
