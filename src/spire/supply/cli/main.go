@@ -25,6 +25,8 @@ func main() {
 
 	stager := libbuildpack.NewStager(os.Args[1:], logger, manifest)
 
+	os.Setenv("DEP_DIR", stager.DepsDir())
+
 	installer := libbuildpack.NewInstaller(manifest)
 	if err = installer.SetAppCacheDir(stager.CacheDir()); err != nil {
 		logger.Error("Unable to setup appcache: %s", err)
