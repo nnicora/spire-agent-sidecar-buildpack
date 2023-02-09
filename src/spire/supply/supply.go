@@ -1,6 +1,7 @@
 package supply
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/libbuildpack"
 	"github.com/nnicora/spire-agent-sidecar-buildpack/src/utils"
 	"html/template"
@@ -10,15 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-)
-
-const (
-	spireServerAddressEnv         = "SPIRE_SERVER_ADDRESS"
-	spireServerPortEnv            = "SPIRE_SERVER_PORT"
-	spireTrustDomainEnv           = "SPIRE_TRUST_DOMAIN"
-	spireEnvoyProxyEnv            = "SPIRE_ENVOY_PROXY"
-	spireApplicationSpiffeIdEnv   = "SPIRE_APPLICATION_SPIFFE_ID"
-	spireCloudFoundrySVIDStoreEnv = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
 )
 
 type Command interface {
@@ -77,6 +69,12 @@ func New(stager Stager, manifest Manifest, installer Installer, logger *libbuild
 }
 
 func (s *Supplier) Run() error {
+	ztis, err := LoadZTIS()
+	if err != nil {
+		s.Log.Error("Failed to load environment credentials; %s", err.Error())
+		return err
+	}
+
 	s.Log.BeginStep("Supplying spire")
 
 	if err := s.Copy("certificates", "certificates"); err != nil {
@@ -84,7 +82,7 @@ func (s *Supplier) Run() error {
 		return err
 	}
 
-	if err := s.CopySpireAgentConf(); err != nil {
+	if err := s.CopySpireAgentConf(ztis); err != nil {
 		s.Log.Error("Failed to configure spire-agent.conf file; %s", err.Error())
 		return err
 	}
@@ -94,7 +92,7 @@ func (s *Supplier) Run() error {
 		return err
 	}
 
-	if err := s.CreateLaunchForSidecars(); err != nil {
+	if err := s.CreateLaunchForSidecars(ztis); err != nil {
 		s.Log.Error("Failed to create the sidecar processes; %s", err.Error())
 		return err
 	}
@@ -142,7 +140,7 @@ func (s *Supplier) Copy(dst string, srcs ...string) error {
 	return nil
 }
 
-func (s *Supplier) CreateLaunchForSidecars() error {
+func (s *Supplier) CreateLaunchForSidecars(ztis *ZTIS) error {
 	launch := filepath.Join(s.Stager.DepDir(), "launch.yml")
 	if _, err := libbuildpack.FileExists(launch); err != nil {
 		return err
@@ -179,19 +177,10 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 		envoyProxyConfigTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "custom-envoy-conf.tmpl")
 		envoyProxyConfig := template.Must(template.ParseFiles(envoyProxyConfigTmpl))
 
-		std, err := utils.Env(spireTrustDomainEnv)
-		if err != nil {
-			return err
-		}
-		sasid, err := utils.Env(spireApplicationSpiffeIdEnv)
-		if err != nil {
-			return err
-		}
-
 		err = envoyProxyConfig.Execute(envoyConfigFile, map[string]interface{}{
 			"Idx":         s.Stager.DepsIdx(),
-			"SpiffeID":    sasid,
-			"TrustDomain": std,
+			"SpiffeID":    ztis.Credentials.Workload.SpiffeID,
+			"TrustDomain": ztis.Credentials.SpireTrustDomain(),
 		})
 		if err != nil {
 			return err
@@ -233,7 +222,7 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 	return nil
 }
 
-func (s *Supplier) CopySpireAgentConf() error {
+func (s *Supplier) CopySpireAgentConf(ztis *ZTIS) error {
 	conf := filepath.Join(s.Stager.DepDir(), "spire-agent.conf")
 	if _, err := libbuildpack.FileExists(conf); err != nil {
 		return err
@@ -249,24 +238,11 @@ func (s *Supplier) CopySpireAgentConf() error {
 	confTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire-agent-conf.tmpl")
 	t := template.Must(template.ParseFiles(confTmpl))
 
-	ssa, err := utils.Env(spireServerAddressEnv)
-	if err != nil {
-		return err
-	}
-	ssp, err := utils.Env(spireServerPortEnv)
-	if err != nil {
-		return err
-	}
-	std, err := utils.Env(spireTrustDomainEnv)
-	if err != nil {
-		return err
-	}
-
 	data := map[string]interface{}{
 		"Idx":                s.Stager.DepsIdx(),
-		"SpireServerAddress": ssa,
-		"SpireServerPort":    ssp,
-		"TrustDomain":        std,
+		"SpireServerAddress": ztis.Credentials.Spire.Host,
+		"SpireServerPort":    fmt.Sprintf("%d", ztis.Credentials.Spire.Port),
+		"TrustDomain":        ztis.Credentials.SpireTrustDomain(),
 	}
 
 	cfSvidStoreEnv := utils.EnvWithDefault(spireCloudFoundrySVIDStoreEnv, "false")
