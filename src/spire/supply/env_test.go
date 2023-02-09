@@ -35,7 +35,7 @@ func TestZtisSuccess(t *testing.T) {
 `
 	os.Setenv("VCAP_SERVICES", vcap)
 
-	d, err := ztis()
+	d, err := LoadZTIS()
 	if err != nil {
 		t.Errorf("can't parse environment variable")
 	}
@@ -51,7 +51,7 @@ func TestZtisSuccess(t *testing.T) {
 func TestZtisNoData(t *testing.T) {
 	os.Setenv("VCAP_SERVICES", `{}`)
 
-	d, err := ztis()
+	d, err := LoadZTIS()
 	if err != nil {
 		t.Errorf("can't parse environment variable")
 	}
