@@ -1,4 +1,7 @@
 #!/bin/bash
 
-env
-sleep 5
+
+while (true); do
+  env &
+  sleep 5
+done

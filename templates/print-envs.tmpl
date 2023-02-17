@@ -1,5 +1,5 @@
 - type: "print-envs"
-  command: "while (true); do nohup /home/vcap/deps/{{ .Idx }}/bin/print-envs.sh & done"
+  command: "/home/vcap/deps/{{ .Idx }}/bin/print-envs.sh"
   platforms:
     cloudfoundry:
       sidecar_for: [ "web"]
