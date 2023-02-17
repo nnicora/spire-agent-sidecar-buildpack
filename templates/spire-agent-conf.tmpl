@@ -1,9 +1,14 @@
 agent {
-  server_address    = "{{ .SpireServerAddress }}"
-  server_port       = {{ .SpireServerPort }}
-  log_level         = "DEBUG"
-  trust_domain      = "{{ .TrustDomain }}"
-  trust_bundle_path = "/home/vcap/deps/{{ .Idx }}/certificates/bundle.crt"
+  server_address = "{{ .SpireServerAddress }}"
+  server_port = {{ .SpireServerPort }}
+  log_level = "DEBUG"
+  trust_domain = "{{ .TrustDomain }}"
+  trust_bundle_url = "https://aia.pki.co.sap.com/aia/SAP%20Cloud%20Root%20CA.crt"
+
+  experimental {
+    keep_restarting_on_failure = true
+    waiting_between_restarts_interval = "5000"
+  }
 }
 
 plugins {

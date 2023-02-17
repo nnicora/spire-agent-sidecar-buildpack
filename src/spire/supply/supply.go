@@ -261,18 +261,9 @@ func (s *Supplier) CopySpireAgentConf() error {
 	confTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire-agent-conf.tmpl")
 	t := template.Must(template.ParseFiles(confTmpl))
 
-	ssa, err := utils.Env(spireServerAddressEnv)
-	if err != nil {
-		return err
-	}
-	ssp, err := utils.Env(spireServerPortEnv)
-	if err != nil {
-		return err
-	}
-	std, err := utils.Env(spireTrustDomainEnv)
-	if err != nil {
-		return err
-	}
+	ssa := utils.EnvWithDefault(spireServerAddressEnv, "")
+	ssp := utils.EnvWithDefault(spireServerPortEnv, "")
+	std := utils.EnvWithDefault(spireTrustDomainEnv, "")
 
 	data := map[string]interface{}{
 		"Idx":                s.Stager.DepsIdx(),
