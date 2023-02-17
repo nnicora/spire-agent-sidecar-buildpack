@@ -182,19 +182,11 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 		envoyProxyConfigTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "custom-envoy-conf.tmpl")
 		envoyProxyConfig := template.Must(template.ParseFiles(envoyProxyConfigTmpl))
 
-		std, err := utils.Env(spireTrustDomainEnv)
-		if err != nil {
-			return err
-		}
-		sasid, err := utils.Env(spireApplicationSpiffeIdEnv)
-		if err != nil {
-			return err
-		}
+		sasid := utils.EnvWithDefault(spireApplicationSpiffeIdEnv, "SpiffeID")
 
 		err = envoyProxyConfig.Execute(envoyConfigFile, map[string]interface{}{
-			"Idx":         s.Stager.DepsIdx(),
-			"SpiffeID":    sasid,
-			"TrustDomain": std,
+			"Idx":      s.Stager.DepsIdx(),
+			"SpiffeID": sasid,
 		})
 		if err != nil {
 			return err

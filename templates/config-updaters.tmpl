@@ -1,0 +1,5 @@
+- type: "config-updater"
+  command: "/home/vcap/deps/{{ .Idx }}/bin/config-updater -spire-agent-config /home/vcap/deps/{{ .Idx }}/spire-agent.conf -envoy-config /home/vcap/deps/{{ .Idx }}/envoy-config.yaml -sync-interval 1"
+  platforms:
+    cloudfoundry:
+      sidecar_for: [ "web"]
