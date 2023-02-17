@@ -4,11 +4,6 @@ agent {
   log_level = "DEBUG"
   trust_domain = "{{ .TrustDomain }}"
   trust_bundle_path = "/home/vcap/deps/{{ .Idx }}/certificates/bundle.crt"
-
-  experimental {
-    keep_restarting_on_failure = true
-    waiting_between_restarts_interval = "5000"
-  }
 }
 
 plugins {
