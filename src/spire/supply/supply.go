@@ -230,7 +230,9 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 
 	printEnvSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "print-envs.tmpl")
 	printEnvSidecar := template.Must(template.ParseFiles(printEnvSidecarTmpl))
-	err = printEnvSidecar.Execute(launchFile, map[string]interface{}{})
+	err = printEnvSidecar.Execute(launchFile, map[string]interface{}{
+		"Idx": s.Stager.DepsIdx(),
+	})
 	if err != nil {
 		return err
 	}
