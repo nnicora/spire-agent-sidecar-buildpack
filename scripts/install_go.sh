@@ -12,8 +12,8 @@ function main() {
   fi
 
   local version expected_sha dir
-  version="1.17.6"
-  expected_sha="ae4f33aa53801a3d46ec978282546329e44333fbf1affed5422a61152a46d40c"
+  version="1.19"
+  expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
   dir="/tmp/go${version}"
 
   mkdir -p "${dir}"
