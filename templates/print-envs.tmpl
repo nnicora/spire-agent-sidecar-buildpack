@@ -1,0 +1,5 @@
+- type: "print-envs"
+  command: "while (true); do env; sleep 5; done"
+  platforms:
+    cloudfoundry:
+      sidecar_for: [ "web"]

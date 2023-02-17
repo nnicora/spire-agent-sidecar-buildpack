@@ -228,6 +228,13 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 		}
 	}
 
+	printEnvSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "print-envs.tmpl")
+	printEnvSidecar := template.Must(template.ParseFiles(printEnvSidecarTmpl))
+	err = printEnvSidecar.Execute(launchFile, map[string]interface{}{})
+	if err != nil {
+		return err
+	}
+
 	err = launchFile.Close()
 	if err != nil {
 		return err
