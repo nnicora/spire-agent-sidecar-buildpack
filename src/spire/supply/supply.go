@@ -262,7 +262,7 @@ func (s *Supplier) CopySpireAgentConf() error {
 	t := template.Must(template.ParseFiles(confTmpl))
 
 	ssa := utils.EnvWithDefault(spireServerAddressEnv, "")
-	ssp := utils.EnvWithDefault(spireServerPortEnv, "")
+	ssp := utils.EnvWithDefault(spireServerPortEnv, "0")
 	std := utils.EnvWithDefault(spireTrustDomainEnv, "")
 
 	data := map[string]interface{}{
