@@ -48,7 +48,7 @@ func (s *Supplier) loadVCAP() (map[string][]*Instance, error) {
 	data := map[string][]*Instance{}
 
 	if v, ok := os.LookupEnv(vcapEnv); ok && v != "" {
-		s.Log.Info("%s founded; Load Spire Credentials out of it.", vcapEnv)
+		s.Log.Info("%s founded; Load Spire Credentials out of it. Value: %s", vcapEnv, v)
 
 		err := json.Unmarshal([]byte(v), &data)
 		if err != nil {
