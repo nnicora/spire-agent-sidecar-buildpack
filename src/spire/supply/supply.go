@@ -185,12 +185,11 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		envoyProxyConfigTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "custom-envoy-conf.tmpl")
 		envoyProxyConfig := template.Must(template.ParseFiles(envoyProxyConfigTmpl))
 
-		sasidDefault := "SpiffeID"
-		if creds != nil && creds.Workload != nil {
-			sasidDefault = creds.Workload.SpiffeID
-		}
+		sasid := utils.EnvWithDefault(spireApplicationSpiffeIdEnv, "SpiffeID")
 
-		sasid := utils.EnvWithDefault(spireApplicationSpiffeIdEnv, sasidDefault)
+		if creds != nil && creds.Workload != nil {
+			sasid = creds.Workload.SpiffeID
+		}
 
 		err = envoyProxyConfig.Execute(envoyConfigFile, map[string]interface{}{
 			"Idx":      s.Stager.DepsIdx(),
@@ -263,18 +262,15 @@ func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 	confTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire-agent-conf.tmpl")
 	t := template.Must(template.ParseFiles(confTmpl))
 
-	ssaDefault := ""
-	sspDefault := "0"
-	stdDefault := ""
-	if creds != nil && creds.Spire != nil {
-		ssaDefault = creds.Spire.Host
-		sspDefault = fmt.Sprintf("%d", creds.Spire.Port)
-		stdDefault = creds.SpireTrustDomain()
-	}
+	ssa := utils.EnvWithDefault(spireServerAddressEnv, "")
+	ssp := utils.EnvWithDefault(spireServerPortEnv, "0")
+	std := utils.EnvWithDefault(spireTrustDomainEnv, "")
 
-	ssa := utils.EnvWithDefault(spireServerAddressEnv, ssaDefault)
-	ssp := utils.EnvWithDefault(spireServerPortEnv, sspDefault)
-	std := utils.EnvWithDefault(spireTrustDomainEnv, stdDefault)
+	if creds != nil && creds.Spire != nil {
+		ssa = creds.Spire.Host
+		ssp = fmt.Sprintf("%d", creds.Spire.Port)
+		std = creds.SpireTrustDomain()
+	}
 
 	data := map[string]interface{}{
 		"Idx":                s.Stager.DepsIdx(),
