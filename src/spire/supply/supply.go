@@ -79,6 +79,10 @@ func New(stager Stager, manifest Manifest, installer Installer, logger *libbuild
 func (s *Supplier) Run() error {
 	s.Log.BeginStep("Supplying spire")
 
+	if v, ok := os.LookupEnv("VCAP_SERVICES"); ok {
+		s.Log.Info("VCAP_SERVICES: %s", v)
+	}
+
 	if err := s.Copy("certificates", "certificates"); err != nil {
 		s.Log.Error("Failed to copy certificates; %s", err.Error())
 		return err
