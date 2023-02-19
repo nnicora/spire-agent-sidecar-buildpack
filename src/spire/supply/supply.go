@@ -1,6 +1,7 @@
 package supply
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/libbuildpack"
 	"github.com/nnicora/spire-agent-sidecar-buildpack/src/utils"
 	"html/template"
@@ -79,16 +80,14 @@ func New(stager Stager, manifest Manifest, installer Installer, logger *libbuild
 func (s *Supplier) Run() error {
 	s.Log.BeginStep("Supplying spire")
 
-	if v, ok := os.LookupEnv("VCAP_SERVICES"); ok {
-		s.Log.Info("VCAP_SERVICES: %s", v)
-	}
+	creds := s.ExtractSpireCredentialsFromVcapServices()
 
 	if err := s.Copy("certificates", "certificates"); err != nil {
 		s.Log.Error("Failed to copy certificates; %s", err.Error())
 		return err
 	}
 
-	if err := s.CopySpireAgentConf(); err != nil {
+	if err := s.CopySpireAgentConf(creds); err != nil {
 		s.Log.Error("Failed to configure spire-agent.conf file; %s", err.Error())
 		return err
 	}
@@ -98,7 +97,7 @@ func (s *Supplier) Run() error {
 		return err
 	}
 
-	if err := s.CreateLaunchForSidecars(); err != nil {
+	if err := s.CreateLaunchForSidecars(creds); err != nil {
 		s.Log.Error("Failed to create the sidecar processes; %s", err.Error())
 		return err
 	}
@@ -146,7 +145,7 @@ func (s *Supplier) Copy(dst string, srcs ...string) error {
 	return nil
 }
 
-func (s *Supplier) CreateLaunchForSidecars() error {
+func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 	launch := filepath.Join(s.Stager.DepDir(), "launch.yml")
 	if _, err := libbuildpack.FileExists(launch); err != nil {
 		return err
@@ -186,7 +185,12 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 		envoyProxyConfigTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "custom-envoy-conf.tmpl")
 		envoyProxyConfig := template.Must(template.ParseFiles(envoyProxyConfigTmpl))
 
-		sasid := utils.EnvWithDefault(spireApplicationSpiffeIdEnv, "SpiffeID")
+		sasidDefault := "SpiffeID"
+		if creds != nil && creds.Workload != nil {
+			sasidDefault = creds.Workload.SpiffeID
+		}
+
+		sasid := utils.EnvWithDefault(spireApplicationSpiffeIdEnv, sasidDefault)
 
 		err = envoyProxyConfig.Execute(envoyConfigFile, map[string]interface{}{
 			"Idx":      s.Stager.DepsIdx(),
@@ -224,13 +228,15 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 		}
 	}
 
-	configUpdatersSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "config-updaters.tmpl")
-	configUpdaterSidecar := template.Must(template.ParseFiles(configUpdatersSidecarTmpl))
-	err = configUpdaterSidecar.Execute(launchFile, map[string]interface{}{
-		"Idx": s.Stager.DepsIdx(),
-	})
-	if err != nil {
-		return err
+	if creds == nil && creds.Spire == nil {
+		configUpdatersSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "config-updaters.tmpl")
+		configUpdaterSidecar := template.Must(template.ParseFiles(configUpdatersSidecarTmpl))
+		err = configUpdaterSidecar.Execute(launchFile, map[string]interface{}{
+			"Idx": s.Stager.DepsIdx(),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	err = launchFile.Close()
@@ -241,7 +247,7 @@ func (s *Supplier) CreateLaunchForSidecars() error {
 	return nil
 }
 
-func (s *Supplier) CopySpireAgentConf() error {
+func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 	conf := filepath.Join(s.Stager.DepDir(), "spire-agent.conf")
 	if _, err := libbuildpack.FileExists(conf); err != nil {
 		return err
@@ -257,9 +263,18 @@ func (s *Supplier) CopySpireAgentConf() error {
 	confTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire-agent-conf.tmpl")
 	t := template.Must(template.ParseFiles(confTmpl))
 
-	ssa := utils.EnvWithDefault(spireServerAddressEnv, "")
-	ssp := utils.EnvWithDefault(spireServerPortEnv, "0")
-	std := utils.EnvWithDefault(spireTrustDomainEnv, "")
+	ssaDefault := ""
+	sspDefault := "0"
+	stdDefault := ""
+	if creds != nil && creds.Spire != nil {
+		ssaDefault = creds.Spire.Host
+		sspDefault = fmt.Sprintf("%d", creds.Spire.Port)
+		stdDefault = creds.SpireTrustDomain()
+	}
+
+	ssa := utils.EnvWithDefault(spireServerAddressEnv, ssaDefault)
+	ssp := utils.EnvWithDefault(spireServerPortEnv, sspDefault)
+	std := utils.EnvWithDefault(spireTrustDomainEnv, stdDefault)
 
 	data := map[string]interface{}{
 		"Idx":                s.Stager.DepsIdx(),
