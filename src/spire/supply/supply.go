@@ -228,7 +228,7 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		}
 	}
 
-	if creds == nil && creds.Spire == nil {
+	if creds == nil {
 		configUpdatersSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "config-updaters.tmpl")
 		configUpdaterSidecar := template.Must(template.ParseFiles(configUpdatersSidecarTmpl))
 		err = configUpdaterSidecar.Execute(launchFile, map[string]interface{}{
