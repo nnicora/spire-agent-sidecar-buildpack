@@ -14,12 +14,15 @@ import (
 )
 
 const (
-	spireServerAddressEnv         = "SPIRE_SERVER_ADDRESS"
-	spireServerPortEnv            = "SPIRE_SERVER_PORT"
-	spireTrustDomainEnv           = "SPIRE_TRUST_DOMAIN"
-	spireEnvoyProxyEnv            = "SPIRE_ENVOY_PROXY"
-	spireApplicationSpiffeIdEnv   = "SPIRE_APPLICATION_SPIFFE_ID"
-	spireCloudFoundrySVIDStoreEnv = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
+	spireServerAddressEnv          = "SPIRE_SERVER_ADDRESS"
+	spireServerPortEnv             = "SPIRE_SERVER_PORT"
+	spireTrustDomainEnv            = "SPIRE_TRUST_DOMAIN"
+	spireLogLevelEnv               = "SPIRE_LOG_LEVEL"
+	spireEnvoyProxyEnv             = "SPIRE_ENVOY_PROXY"
+	spireApplicationSpiffeIdEnv    = "SPIRE_APPLICATION_SPIFFE_ID"
+	spireCloudFoundrySVIDStoreEnv  = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
+	spireEnvoyLogLevelEnv          = "SPIRE_ENVOY_LOG_LEVEL"
+	spireEnvoyComponentLogLevelEnv = "SPIRE_ENVOY_COMPONENT_LOG_LEVEL"
 )
 
 type Command interface {
@@ -204,11 +207,16 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 			return err
 		}
 
+		ll := utils.EnvWithDefault(spireEnvoyLogLevelEnv, "info")
+		cll := utils.EnvWithDefault(spireEnvoyComponentLogLevelEnv, "")
+
 		envoyProxySidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "envoy_proxy-sidecar.tmpl")
 		envoyProxySidecar := template.Must(template.ParseFiles(envoyProxySidecarTmpl))
 		err = envoyProxySidecar.Execute(launchFile, map[string]interface{}{
-			"Idx":    s.Stager.DepsIdx(),
-			"BaseId": rand.Int63n(65000),
+			"Idx":               s.Stager.DepsIdx(),
+			"BaseId":            rand.Int63n(65000),
+			"LogLevel":          ll,
+			"ComponentLogLevel": cll,
 		})
 		if err != nil {
 			return err
@@ -272,11 +280,14 @@ func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 		std = creds.SpireTrustDomain()
 	}
 
+	ll := utils.EnvWithDefault(spireLogLevelEnv, "INFO")
+
 	data := map[string]interface{}{
 		"Idx":                s.Stager.DepsIdx(),
 		"SpireServerAddress": ssa,
 		"SpireServerPort":    ssp,
 		"TrustDomain":        std,
+		"LogLevel":           ll,
 	}
 
 	cfSvidStoreEnv := utils.EnvWithDefault(spireCloudFoundrySVIDStoreEnv, "false")
