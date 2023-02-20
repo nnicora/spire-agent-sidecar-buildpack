@@ -1,7 +1,7 @@
 agent {
   server_address = "{{ .SpireServerAddress }}"
   server_port = {{ .SpireServerPort }}
-  log_level = "DEBUG"
+  log_level = "INFO"
   trust_domain = "{{ .TrustDomain }}"
   trust_bundle_path = "/home/vcap/deps/{{ .Idx }}/certificates/bundle.crt"
 }

@@ -1,8 +1,8 @@
 module github.com/nnicora/spire-agent-sidecar-buildpack
 
-go 1.18
+go 1.19
 
-require github.com/cloudfoundry/libbuildpack v0.0.0-20220509111721-05ef1d6ca1f1
+require github.com/cloudfoundry/libbuildpack v0.0.0-20230209225346-0e58f7be61d4
 
 require (
 	github.com/Masterminds/semver v1.5.0 // indirect
