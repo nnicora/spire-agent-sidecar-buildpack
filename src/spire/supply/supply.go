@@ -23,7 +23,7 @@ const (
 	spireCloudFoundrySVIDStoreEnv  = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
 	spireEnvoyLogLevelEnv          = "SPIRE_ENVOY_LOG_LEVEL"
 	spireEnvoyComponentLogLevelEnv = "SPIRE_ENVOY_COMPONENT_LOG_LEVEL"
-	svidKeyTypeEnv                 = "SPIRE_SVID_KEY_TYPE"
+	svidKeyTypeEnv                 = "SPIRE_AGENT_WORKLOAD_X509_SVID_KEY_TYPE"
 )
 
 var (
