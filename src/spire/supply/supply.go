@@ -23,6 +23,15 @@ const (
 	spireCloudFoundrySVIDStoreEnv  = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
 	spireEnvoyLogLevelEnv          = "SPIRE_ENVOY_LOG_LEVEL"
 	spireEnvoyComponentLogLevelEnv = "SPIRE_ENVOY_COMPONENT_LOG_LEVEL"
+	svidKeyTypeEnv                 = "SPIRE_SVID_KEY_TYPE"
+)
+
+var (
+	defaultSvidKeyType  = "ec-p256"
+	allowedSvidKeyTypes = map[string]struct{}{
+		"rsa-2048": {},
+		"ec-p256":  {},
+	}
 )
 
 type Command interface {
@@ -273,6 +282,10 @@ func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 	ssa := utils.EnvWithDefault(spireServerAddressEnv, "")
 	ssp := utils.EnvWithDefault(spireServerPortEnv, "0")
 	std := utils.EnvWithDefault(spireTrustDomainEnv, "")
+	skt := utils.EnvWithDefault(svidKeyTypeEnv, defaultSvidKeyType)
+	if _, ok := allowedSvidKeyTypes[skt]; !ok {
+		skt = defaultSvidKeyType
+	}
 
 	if creds != nil && creds.Spire != nil {
 		ssa = creds.Spire.Host
@@ -287,6 +300,7 @@ func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 		"SpireServerAddress": ssa,
 		"SpireServerPort":    ssp,
 		"TrustDomain":        std,
+		"SvidKeyType":        skt,
 		"LogLevel":           ll,
 	}
 
