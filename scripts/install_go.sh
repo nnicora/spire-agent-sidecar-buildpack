@@ -17,7 +17,7 @@ function main() {
   if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
       CF_STACK="cflinuxfs3"
   fi
-  expected_sha=shas["${CF_STACK:-}"]
+  expected_sha=shas["${CF_STACK}"]
 
   echo "Using CF stack ${CF_STACK}"
 
