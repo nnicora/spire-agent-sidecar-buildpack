@@ -4,37 +4,48 @@ set -e
 set -u
 set -o pipefail
 
+declare -A gobuildpack
+
+go1.19="1.19"
+gobuildpacks[go1.19]["cflinuxfs3"]="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+#gobuildpacks[go1.19]["cflinuxfs4"]="3648319f545e416a6b7dc552cff8e8711901ab31271eee811a9269e0497b186f"
+
 function main() {
+#  if [[ "${CF_STACK:-}" != "cflinuxfs3" && "${CF_STACK:-}" != "cflinuxfs4" ]]; then
+#      CF_STACK="cflinuxfs3"
+#    fi
+
   if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
-    echo "       **ERROR** Unsupported stack"
-    echo "                 See https://docs.cloudfoundry.org/devguide/deploy-apps/stacks.html for more info"
-    exit 1
+    CF_STACK="cflinuxfs3"
+  fi
+  if [[ "${GO_VERSION:-}" == "" || -v gobuildpacks["${GO_VERSION:-}"] ]]; then
+      GO_VERSION="1.19"
   fi
 
-  local version expected_sha dir
-  version="1.19"
-  expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
-  dir="/tmp/go${version}"
+  echo "Using CF stack ${CF_STACK}"
+
+  local expected_sha=gobuildpacks["${GO_VERSION}"]["${CF_STACK}"]
+  local dir="/tmp/go${GO_VERSION}"
 
   mkdir -p "${dir}"
 
   if [[ ! -f "${dir}/go/bin/go" ]]; then
     local url
-    url="https://buildpacks.cloudfoundry.org/dependencies/go/go_${version}_linux_x64_${CF_STACK}_${expected_sha:0:8}.tgz"
+    url="https://buildpacks.cloudfoundry.org/dependencies/go/go_${GO_VERSION}_linux_x64_${CF_STACK}_${expected_sha:0:8}.tgz"
 
-    echo "-----> Download go ${version}"
+    echo "-----> Download Golang Buildpack: ${url}"
     curl "${url}" \
       --silent \
       --location \
       --retry 15 \
-      --retry-delay 2 \
+      --retry-delay 4 \
       --output "/tmp/go.tgz"
 
     local sha
     sha="$(shasum -a 256 /tmp/go.tgz | cut -d ' ' -f 1)"
 
     if [[ "${sha}" != "${expected_sha}" ]]; then
-      echo "       **ERROR** SHA256 mismatch: got ${sha}, expected ${expected_sha}"
+      echo "       **ERROR** Golang Buildpack SHA256 mismatch: got ${sha}, expected ${expected_sha}"
       exit 1
     fi
 
@@ -43,7 +54,7 @@ function main() {
   fi
 
   if [[ ! -f "${dir}/bin/go" ]]; then
-    echo "       **ERROR** Could not download go"
+    echo "       **ERROR** Could not download go from set URL: ${url}"
     exit 1
   fi
 
