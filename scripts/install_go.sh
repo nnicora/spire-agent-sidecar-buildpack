@@ -6,13 +6,18 @@ set -o pipefail
 
 
 function main() {
-  if [[ "${CF_STACK:-}" != "cflinuxfs3" || "${CF_STACK:-}" != "cflinuxfs4" ]]; then
-      CF_STACK="cflinuxfs3"
-    fi
+  local shas expected_sha version dir
+   version="1.19"
+   shas["cflinuxfs3"]="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
 
-  local expected_sha version dir
-  version="1.19"
-  expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+#  if [[ "${CF_STACK:-}" != "cflinuxfs3" || "${CF_STACK:-}" != "cflinuxfs4" ]]; then
+#      CF_STACK="cflinuxfs3"
+#  fi
+
+  if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
+      CF_STACK="cflinuxfs3"
+  fi
+  expected_sha=shas["${CF_STACK:-}"]
 
   echo "Using CF stack ${CF_STACK}"
 
