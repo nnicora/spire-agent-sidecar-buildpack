@@ -4,16 +4,32 @@ set -e
 set -u
 set -o pipefail
 
+
 function main() {
+#  if [[ "${CF_STACK:-}" != "cflinuxfs3" || "${CF_STACK:-}" != "cflinuxfs4" ]]; then
+#      CF_STACK="cflinuxfs3"
+#  fi
   if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
-    echo "       **ERROR** Unsupported stack"
-    echo "                 See https://docs.cloudfoundry.org/devguide/deploy-apps/stacks.html for more info"
-    exit 1
+      CF_STACK="cflinuxfs3"
   fi
 
-  local version expected_sha dir
-  version="1.19"
-  expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+ local expected_sha version dir
+ version="1.19"
+  if [[ "${CF_STACK:-}" == "cflinuxfs3" ]]; then
+        expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+  fi
+  if [[ "${CF_STACK:-}" == "cflinuxfs4" ]]; then
+        expected_sha="cflinuxfs4 not yet ready to support"
+  fi
+
+  if [ -z ${expected_sha+x} ]; then
+      echo "  **ERROR** Unsupported stack"
+      echo "    See https://docs.cloudfoundry.org/devguide/deploy-apps/stacks.html for more info"
+      exit 1
+  fi
+
+  echo "Using CF stack ${CF_STACK}"
+
   dir="/tmp/go${version}"
 
   mkdir -p "${dir}"
@@ -22,19 +38,19 @@ function main() {
     local url
     url="https://buildpacks.cloudfoundry.org/dependencies/go/go_${version}_linux_x64_${CF_STACK}_${expected_sha:0:8}.tgz"
 
-    echo "-----> Download go ${version}"
+    echo "-----> Download Golang Buildpack: ${url}"
     curl "${url}" \
       --silent \
       --location \
       --retry 15 \
-      --retry-delay 2 \
+      --retry-delay 4 \
       --output "/tmp/go.tgz"
 
     local sha
     sha="$(shasum -a 256 /tmp/go.tgz | cut -d ' ' -f 1)"
 
     if [[ "${sha}" != "${expected_sha}" ]]; then
-      echo "       **ERROR** SHA256 mismatch: got ${sha}, expected ${expected_sha}"
+      echo "       **ERROR** Golang Buildpack SHA256 mismatch: got ${sha}, expected ${expected_sha}"
       exit 1
     fi
 
@@ -43,7 +59,7 @@ function main() {
   fi
 
   if [[ ! -f "${dir}/bin/go" ]]; then
-    echo "       **ERROR** Could not download go"
+    echo "       **ERROR** Could not download go from set URL: ${url}"
     exit 1
   fi
 
