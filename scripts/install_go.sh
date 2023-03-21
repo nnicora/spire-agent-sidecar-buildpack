@@ -14,6 +14,7 @@ function main() {
   fi
 
  local expected_sha version dir
+ version="1.19"
   if [[ "${CF_STACK:-}" == "cflinuxfs3" ]]; then
         expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
   fi
