@@ -6,17 +6,25 @@ set -o pipefail
 
 
 function main() {
-  local shas expected_sha version dir
-   version="1.19"
-   shas["cflinuxfs3"]="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
-
 #  if [[ "${CF_STACK:-}" != "cflinuxfs3" || "${CF_STACK:-}" != "cflinuxfs4" ]]; then
 #      CF_STACK="cflinuxfs3"
 #  fi
-
   if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
       CF_STACK="cflinuxfs3"
-      expected_sha=shas["cflinuxfs3"]
+  fi
+
+ local expected_sha version dir
+  if [[ "${CF_STACK:-}" == "cflinuxfs3" ]]; then
+        expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+  fi
+  if [[ "${CF_STACK:-}" == "cflinuxfs4" ]]; then
+        expected_sha="cflinuxfs4 not yet ready to support"
+  fi
+
+  if [ -z ${expected_sha+x} ]; then
+      echo "  **ERROR** Unsupported stack"
+      echo "    See https://docs.cloudfoundry.org/devguide/deploy-apps/stacks.html for more info"
+      exit 1
   fi
 
   echo "Using CF stack ${CF_STACK}"
