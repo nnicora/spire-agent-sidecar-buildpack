@@ -10,21 +10,17 @@ function main() {
 #      CF_STACK="cflinuxfs3"
 #    fi
 
+  local cflinuxfs3 cflinuxfs4 expected_sha version dir
+  version="1.19"
+  cflinuxfs3="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+  cflinuxfs4="3648319f545e416a6b7dc552cff8e8711901ab31271eee811a9269e0497b186f"
 
   if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
     CF_STACK="cflinuxfs3"
+    expected_sha=cflinuxfs3
   fi
 
   echo "Using CF stack ${CF_STACK}"
-
-  local expected_sha version goversion
-
-  version="1.19"
-
-  cf_platform["cflinuxfs3"]="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
-  cf_platform["cflinuxfs4"]="3648319f545e416a6b7dc552cff8e8711901ab31271eee811a9269e0497b186f"
-
-  expected_sha=cf_platform["${CF_STACK}"]
 
   dir="/tmp/go${version}"
 
