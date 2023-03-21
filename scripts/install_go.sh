@@ -4,16 +4,12 @@ set -e
 set -u
 set -o pipefail
 
-declare -A cf_platform
-goversion="1.19"
-
-cf_platform["cflinuxfs3"]="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
-cf_platform["cflinuxfs4"]="3648319f545e416a6b7dc552cff8e8711901ab31271eee811a9269e0497b186f"
 
 function main() {
 #  if [[ "${CF_STACK:-}" != "cflinuxfs3" && "${CF_STACK:-}" != "cflinuxfs4" ]]; then
 #      CF_STACK="cflinuxfs3"
 #    fi
+
 
   if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
     CF_STACK="cflinuxfs3"
@@ -21,14 +17,22 @@ function main() {
 
   echo "Using CF stack ${CF_STACK}"
 
-  local expected_sha=cf_platform["${CF_STACK}"]
-  local dir="/tmp/go${goversion}"
+  local expected_sha version goversion
+
+  version="1.19"
+
+  cf_platform["cflinuxfs3"]="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+  cf_platform["cflinuxfs4"]="3648319f545e416a6b7dc552cff8e8711901ab31271eee811a9269e0497b186f"
+
+  expected_sha=cf_platform["${CF_STACK}"]
+
+  dir="/tmp/go${version}"
 
   mkdir -p "${dir}"
 
   if [[ ! -f "${dir}/go/bin/go" ]]; then
     local url
-    url="https://buildpacks.cloudfoundry.org/dependencies/go/go_${goversion}_linux_x64_${CF_STACK}_${expected_sha:0:8}.tgz"
+    url="https://buildpacks.cloudfoundry.org/dependencies/go/go_${version}_linux_x64_${CF_STACK}_${expected_sha:0:8}.tgz"
 
     echo "-----> Download Golang Buildpack: ${url}"
     curl "${url}" \
