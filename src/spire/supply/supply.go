@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const (
@@ -174,15 +173,10 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		return err
 	}
 
-	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
-	rand.Seed(time.Now().UnixNano())
-	c := charset[rand.Intn(len(charset))]
-
 	spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
 	spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
 	err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
 		"Idx": s.Stager.DepsIdx(),
-		"App": string(c),
 	})
 	if err != nil {
 		return err
