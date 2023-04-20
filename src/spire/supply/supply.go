@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -174,17 +175,21 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 	}
 
 	counter := 0
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
 	for {
+		rand.Seed(time.Now().UnixNano())
+		c := charset[rand.Intn(len(charset))]
+
 		spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
 		spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
 		err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
 			"Idx": s.Stager.DepsIdx(),
-			"App": fmt.Sprintf("%d", counter),
+			"App": string(c),
 		})
 		if err != nil {
 			return err
 		}
-		if counter >= 0 {
+		if counter >= 20 {
 			break
 		}
 		counter++
