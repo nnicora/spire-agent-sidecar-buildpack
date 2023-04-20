@@ -184,7 +184,7 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		if err != nil {
 			return err
 		}
-		if counter >= 20 {
+		if counter >= 0 {
 			break
 		}
 		counter++
