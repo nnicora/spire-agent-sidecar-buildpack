@@ -173,10 +173,10 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		return err
 	}
 
-	spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
-	spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
 	counter := 0
 	for {
+		spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
+		spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
 		err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
 			"Idx": s.Stager.DepsIdx(),
 			"App": fmt.Sprintf("%d", counter),
