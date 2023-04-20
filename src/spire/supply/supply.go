@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 	spireEnvoyLogLevelEnv          = "SPIRE_ENVOY_LOG_LEVEL"
 	spireEnvoyComponentLogLevelEnv = "SPIRE_ENVOY_COMPONENT_LOG_LEVEL"
 	svidKeyTypeEnv                 = "SPIRE_AGENT_WORKLOAD_X509_SVID_KEY_TYPE"
+	multipleAgentsEnv              = "MULTIPLE_AGENTS"
 )
 
 var (
@@ -171,6 +173,39 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 	_, err = launchFile.WriteString("---\nprocesses:\n")
 	if err != nil {
 		return err
+	}
+
+	multipleAgents := utils.EnvWithDefault(multipleAgentsEnv, "false")
+	if multipleAgents == "true" {
+		rand.Seed(time.Now().UnixNano())
+		counter := 0
+		charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
+		for {
+			c := charset[rand.Intn(len(charset))]
+			spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
+			spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
+			err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
+				"Idx": s.Stager.DepsIdx(),
+				"App": string(c),
+			})
+			if err != nil {
+				return err
+			}
+			if counter >= 20 {
+				break
+			}
+			counter++
+		}
+	} else {
+		spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
+		spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
+		err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
+			"Idx": s.Stager.DepsIdx(),
+			"App": "",
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
