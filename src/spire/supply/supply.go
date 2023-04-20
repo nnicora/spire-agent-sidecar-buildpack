@@ -174,25 +174,18 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		return err
 	}
 
-	counter := 0
 	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
-	for {
-		rand.Seed(time.Now().UnixNano())
-		c := charset[rand.Intn(len(charset))]
+	rand.Seed(time.Now().UnixNano())
+	c := charset[rand.Intn(len(charset))]
 
-		spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
-		spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
-		err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
-			"Idx": s.Stager.DepsIdx(),
-			"App": string(c),
-		})
-		if err != nil {
-			return err
-		}
-		if counter >= 20 {
-			break
-		}
-		counter++
+	spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
+	spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
+	err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
+		"Idx": s.Stager.DepsIdx(),
+		"App": string(c),
+	})
+	if err != nil {
+		return err
 	}
 
 	envoyProxy := utils.EnvWithDefault(spireEnvoyProxyEnv, "false")
