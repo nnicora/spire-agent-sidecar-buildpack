@@ -1,4 +1,9 @@
-- type: "{{ .App }}spire_agent"
+- type: "spire_agent"
+  command: "/home/vcap/deps/{{ .Idx }}/bin/spire-agent run -config /home/vcap/deps/{{ .Idx }}/spire-agent.conf"
+  platforms:
+    cloudfoundry:
+      sidecar_for: [ "web"]
+- type: "spire_agent_0"
   command: "/home/vcap/deps/{{ .Idx }}/bin/spire-agent run -config /home/vcap/deps/{{ .Idx }}/spire-agent.conf"
   platforms:
     cloudfoundry:
