@@ -208,15 +208,6 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		}
 	}
 
-	spireAgentSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire_agent-sidecar.tmpl")
-	spireAgentSidecar := template.Must(template.ParseFiles(spireAgentSidecarTmpl))
-	err = spireAgentSidecar.Execute(launchFile, map[string]interface{}{
-		"Idx": s.Stager.DepsIdx(),
-	})
-	if err != nil {
-		return err
-	}
-
 	envoyProxy := utils.EnvWithDefault(spireEnvoyProxyEnv, "false")
 	if strings.ToLower(envoyProxy) == "true" {
 		envoyConfig := filepath.Join(s.Stager.DepDir(), "envoy-config.yaml")
