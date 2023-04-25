@@ -6,20 +6,17 @@ set -o pipefail
 
 
 function main() {
-#  if [[ "${CF_STACK:-}" != "cflinuxfs3" || "${CF_STACK:-}" != "cflinuxfs4" ]]; then
-#      CF_STACK="cflinuxfs3"
-#  fi
-  if [[ "${CF_STACK:-}" != "cflinuxfs3" ]]; then
-      CF_STACK="cflinuxfs3"
+  if [[ "${CF_STACK:-}" != "cflinuxfs3" || "${CF_STACK:-}" != "cflinuxfs4" ]]; then
+      CF_STACK="cflinuxfs4"
   fi
 
  local expected_sha version dir
- version="1.19"
+ version="1.20.3"
   if [[ "${CF_STACK:-}" == "cflinuxfs3" ]]; then
-        expected_sha="7e231ea5c68f4be7fea916d27814cc34b95e78c4664c3eb2411e8370f87558bd"
+        expected_sha="02e80e1f944e22bb38ea99337d5a62ab7567b9a5615c19931e3a36749d28c415"
   fi
   if [[ "${CF_STACK:-}" == "cflinuxfs4" ]]; then
-        expected_sha="cflinuxfs4 not yet ready to support"
+        expected_sha="69f652d7f6fdaf9b12e721899ba076e5298cb668623e143bb5b4d83068501aca"
   fi
 
   if [ -z ${expected_sha+x} ]; then
