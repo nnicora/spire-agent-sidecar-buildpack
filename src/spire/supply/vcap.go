@@ -8,12 +8,13 @@ import (
 
 const (
 	vcapEnv = "VCAP_SERVICES"
+	spiffe  = "spiffe://"
 )
 
 type Instance struct {
-	BindingGuid  string       `json:"binding_guid"`
+	BindingGUID  string       `json:"binding_guid"`
 	BindingName  string       `json:"binding_name"`
-	InstanceGuid string       `json:"instance_guid"`
+	InstanceGUID string       `json:"instance_guid"`
 	InstanceName string       `json:"instance_name"`
 	Label        string       `json:"label"`
 	Name         string       `json:"name"`
@@ -33,8 +34,8 @@ type Spire struct {
 
 func (s *Credentials) SpireTrustDomain() string {
 	spiffeID := s.Workload.SpiffeID
-	if strings.HasPrefix(spiffeID, "spiffe://") {
-		spiffeID = strings.TrimPrefix(spiffeID, "spiffe://")
+	if strings.HasPrefix(spiffeID, spiffe) {
+		spiffeID = strings.TrimPrefix(spiffeID, spiffe)
 		return strings.Split(spiffeID, "/")[0]
 	}
 	return ""
@@ -66,11 +67,9 @@ func (s *Supplier) ExtractSpireCredentialsFromVcapServices() (*Credentials, erro
 	}
 
 	for _, v := range vcap {
-		if len(v) > 0 {
-			for _, i := range v {
-				if i.Credentials != nil && i.Credentials.Spire != nil && i.Credentials.Workload != nil {
-					return i.Credentials, nil
-				}
+		for _, i := range v {
+			if i.Credentials != nil && i.Credentials.Spire != nil && i.Credentials.Workload != nil {
+				return i.Credentials, nil
 			}
 		}
 	}

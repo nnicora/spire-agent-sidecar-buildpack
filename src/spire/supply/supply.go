@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry/libbuildpack"
+
 	"github.tools.sap/pse/spire-agent-sidecar-buildpack/src/utils"
 )
 
@@ -126,14 +127,11 @@ func (s *Supplier) Run() error {
 func (s *Supplier) Copy(dst string, srcs ...string) error {
 	paths := make([]string, 0, len(srcs)+1)
 	paths = append(paths, s.Manifest.RootDir())
-
-	for _, location := range srcs {
-		paths = append(paths, location)
-	}
+	paths = append(paths, srcs...)
 
 	dir := filepath.Join(paths...)
 
-	var err = filepath.Walk(dir, func(srcPath string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(srcPath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -145,9 +143,9 @@ func (s *Supplier) Copy(dst string, srcs ...string) error {
 		if errCopy := libbuildpack.CopyFile(srcPath, dstPath); errCopy != nil {
 			s.Log.Error("Can't copy file: %s; Source `%s`, destination `%s`", errCopy.Error(), srcPath, dstPath)
 			return errCopy
-		} else {
-			s.Log.Info("Copy file from Source `%s`, destination `%s`", srcPath, dstPath)
 		}
+
+		s.Log.Info("Copy file from Source `%s`, destination `%s`", srcPath, dstPath)
 
 		return nil
 	})

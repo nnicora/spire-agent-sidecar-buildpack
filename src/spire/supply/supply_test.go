@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/libbuildpack"
 	"github.com/cloudfoundry/libbuildpack/ansicleaner"
 	"github.com/golang/mock/gomock"
+
 	"github.tools.sap/pse/spire-agent-sidecar-buildpack/src/spire/supply"
 
 	. "github.com/onsi/ginkgo"
