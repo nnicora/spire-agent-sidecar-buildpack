@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/nnicora/spire-agent-sidecar-buildpack/src/spire/supply"
 	"os"
 	"time"
+
+	"github.tools.sap/pse/spire-agent-sidecar-buildpack/src/spire/supply"
 
 	"github.com/cloudfoundry/libbuildpack"
 )

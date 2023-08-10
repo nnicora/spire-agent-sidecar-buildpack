@@ -1,11 +1,22 @@
-default_versions: []
-dependencies: []
-dependency_deprecation_dates: []
+---
+language: spire-agent
+default_versions:
+  - name: spire-agent
+    version: 1.6.0-dev-unk
 include_files:
+  - README.md
   - VERSION
   - bin/supply
-  - bin/compile
+  - binaries/plugins/cf_iic
+  - binaries/plugins/svidstore_file
+  - binaries/config-updater
   - binaries/spire-agent
-  - configs/agent.conf
+  - certificates/bundle.crt
+  - templates/config-updaters.tmpl
+  - templates/custom-envoy-conf.tmpl
+  - templates/envoy_proxy-sidecar.tmpl
   - templates/spire-agent-conf.tmpl
-language: spire-agent
+  - templates/spire_agent-sidecar.tmpl
+  - templates/svid-file-sidecar.tmpl
+  - manifest.yml
+pre_package: scripts/build.sh

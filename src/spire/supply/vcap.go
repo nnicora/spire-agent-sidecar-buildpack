@@ -59,20 +59,21 @@ func (s *Supplier) loadVCAP() (map[string][]*Instance, error) {
 	return data, nil
 }
 
-func (s *Supplier) ExtractSpireCredentialsFromVcapServices() *Credentials {
-	if d, err := s.loadVCAP(); err != nil {
-		s.Log.Info("Couldn't load %s environment variable: %v", vcapEnv, err)
-	} else {
-		for _, v := range d {
-			if len(v) > 0 {
-				for _, i := range v {
-					if i.Credentials != nil && i.Credentials.Spire != nil && i.Credentials.Workload != nil {
-						return i.Credentials
-					}
+func (s *Supplier) ExtractSpireCredentialsFromVcapServices() (*Credentials, error) {
+	vcap, err := s.loadVCAP()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range vcap {
+		if len(v) > 0 {
+			for _, i := range v {
+				if i.Credentials != nil && i.Credentials.Spire != nil && i.Credentials.Workload != nil {
+					return i.Credentials, nil
 				}
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }

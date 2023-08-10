@@ -2,28 +2,24 @@ package supply
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/libbuildpack"
-	"github.com/nnicora/spire-agent-sidecar-buildpack/src/utils"
 	"html/template"
 	"io"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/cloudfoundry/libbuildpack"
+	"github.tools.sap/pse/spire-agent-sidecar-buildpack/src/utils"
 )
 
 const (
-	spireServerAddressEnv          = "SPIRE_SERVER_ADDRESS"
-	spireServerPortEnv             = "SPIRE_SERVER_PORT"
-	spireTrustDomainEnv            = "SPIRE_TRUST_DOMAIN"
-	spireLogLevelEnv               = "SPIRE_LOG_LEVEL"
-	spireEnvoyProxyEnv             = "SPIRE_ENVOY_PROXY"
-	spireApplicationSpiffeIdEnv    = "SPIRE_APPLICATION_SPIFFE_ID"
-	spireCloudFoundrySVIDStoreEnv  = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
-	spireEnvoyLogLevelEnv          = "SPIRE_ENVOY_LOG_LEVEL"
-	spireEnvoyComponentLogLevelEnv = "SPIRE_ENVOY_COMPONENT_LOG_LEVEL"
-	svidKeyTypeEnv                 = "SPIRE_AGENT_WORKLOAD_X509_SVID_KEY_TYPE"
+	spireServerAddressEnv         = "SPIRE_SERVER_ADDRESS"
+	spireServerPortEnv            = "SPIRE_SERVER_PORT"
+	spireTrustDomainEnv           = "SPIRE_TRUST_DOMAIN"
+	spireLogLevelEnv              = "SPIRE_LOG_LEVEL"
+	spireCloudFoundrySVIDStoreEnv = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
+	svidKeyTypeEnv                = "SPIRE_AGENT_WORKLOAD_X509_SVID_KEY_TYPE"
 )
 
 var (
@@ -53,10 +49,12 @@ type Installer interface {
 
 type Stager interface {
 	AddBinDependencyLink(string, string) error
-	DepDir() string
-	DepsIdx() string
-	DepsDir() string
 	BuildDir() string
+	DepDir() string
+	DepsDir() string
+	DepsIdx() string
+	WriteConfigYml(interface{}) error
+	WriteEnvFile(string, string) error
 	WriteProfileD(string, string) error
 }
 
@@ -90,16 +88,19 @@ func New(stager Stager, manifest Manifest, installer Installer, logger *libbuild
 }
 
 func (s *Supplier) Run() error {
-	s.Log.BeginStep("Supplying spire")
+	s.Log.BeginStep("Supplying SPIRE agent")
 
-	creds := s.ExtractSpireCredentialsFromVcapServices()
+	creds, err := s.ExtractSpireCredentialsFromVcapServices()
+	if err != nil {
+		s.Log.Info("Couldn't load %s environment variable: %v", vcapEnv, err)
+	}
 
 	if err := s.Copy("certificates", "certificates"); err != nil {
 		s.Log.Error("Failed to copy certificates; %s", err.Error())
 		return err
 	}
 
-	if err := s.CopySpireAgentConf(creds); err != nil {
+	if err := s.CreateSpireAgentConf(creds); err != nil {
 		s.Log.Error("Failed to configure spire-agent.conf file; %s", err.Error())
 		return err
 	}
@@ -132,7 +133,7 @@ func (s *Supplier) Copy(dst string, srcs ...string) error {
 
 	dir := filepath.Join(paths...)
 
-	err := filepath.Walk(dir, func(srcPath string, info os.FileInfo, err error) error {
+	var err = filepath.Walk(dir, func(srcPath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -150,11 +151,7 @@ func (s *Supplier) Copy(dst string, srcs ...string) error {
 
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
@@ -182,56 +179,6 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 		return err
 	}
 
-	envoyProxy := utils.EnvWithDefault(spireEnvoyProxyEnv, "false")
-	if strings.ToLower(envoyProxy) == "true" {
-		envoyConfig := filepath.Join(s.Stager.DepDir(), "envoy-config.yaml")
-		if _, err := libbuildpack.FileExists(launch); err != nil {
-			return err
-		}
-
-		envoyConfigFile, err := os.Create(envoyConfig)
-		if err != nil {
-			return err
-		}
-
-		envoyProxyConfigTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "custom-envoy-conf.tmpl")
-		envoyProxyConfig := template.Must(template.ParseFiles(envoyProxyConfigTmpl))
-
-		sasid := utils.EnvWithDefault(spireApplicationSpiffeIdEnv, "SpiffeID")
-
-		if creds != nil && creds.Workload != nil {
-			sasid = creds.Workload.SpiffeID
-		}
-
-		err = envoyProxyConfig.Execute(envoyConfigFile, map[string]interface{}{
-			"Idx":      s.Stager.DepsIdx(),
-			"SpiffeID": sasid,
-		})
-		if err != nil {
-			return err
-		}
-
-		err = envoyConfigFile.Close()
-		if err != nil {
-			return err
-		}
-
-		ll := utils.EnvWithDefault(spireEnvoyLogLevelEnv, "info")
-		cll := utils.EnvWithDefault(spireEnvoyComponentLogLevelEnv, "")
-
-		envoyProxySidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "envoy_proxy-sidecar.tmpl")
-		envoyProxySidecar := template.Must(template.ParseFiles(envoyProxySidecarTmpl))
-		err = envoyProxySidecar.Execute(launchFile, map[string]interface{}{
-			"Idx":               s.Stager.DepsIdx(),
-			"BaseId":            rand.Int63n(65000),
-			"LogLevel":          ll,
-			"ComponentLogLevel": cll,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
 	svidFile := utils.EnvWithDefault(spireCloudFoundrySVIDStoreEnv, "false")
 	if strings.ToLower(svidFile) == "true" {
 		svidFileSidecarTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "svid-file-sidecar.tmpl")
@@ -256,14 +203,10 @@ func (s *Supplier) CreateLaunchForSidecars(creds *Credentials) error {
 	}
 
 	err = launchFile.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
+func (s *Supplier) CreateSpireAgentConf(creds *Credentials) error {
 	conf := filepath.Join(s.Stager.DepDir(), "spire-agent.conf")
 	if _, err := libbuildpack.FileExists(conf); err != nil {
 		return err
@@ -274,7 +217,7 @@ func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 		return err
 	}
 
-	s.Log.Info("Spire agent conf: %s", conf)
+	s.Log.Info("SPIRE agent configuration: %s", conf)
 
 	confTmpl := filepath.Join(s.Manifest.RootDir(), "templates", "spire-agent-conf.tmpl")
 	t := template.Must(template.ParseFiles(confTmpl))
@@ -304,33 +247,16 @@ func (s *Supplier) CopySpireAgentConf(creds *Credentials) error {
 		"LogLevel":           ll,
 	}
 
-	cfSvidStoreEnv := utils.EnvWithDefault(spireCloudFoundrySVIDStoreEnv, "false")
-	if strings.ToLower(cfSvidStoreEnv) == "true" {
-		data["CloudFoundrySVIDStoreEnabled"] = true
-	}
 	err = t.Execute(f, data)
 	if err != nil {
 		return err
 	}
 
 	err = f.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (s *Supplier) Setup() error {
-	configPath := filepath.Join(s.Stager.BuildDir(), "buildpack.yml")
-	if exists, err := libbuildpack.FileExists(configPath); err != nil {
-		return err
-	} else if exists {
-		if err := libbuildpack.NewYAML().Load(configPath, &s.Config); err != nil {
-			return err
-		}
-	}
-
 	var m struct {
 		VersionLines map[string]string `yaml:"version_lines"`
 	}
@@ -341,9 +267,12 @@ func (s *Supplier) Setup() error {
 
 	// create logs directory in case if doesn't exist
 	logsDirPath := filepath.Join(s.Stager.BuildDir(), "logs")
-	if exists, err := libbuildpack.FileExists(logsDirPath); err != nil {
+	exists, err := libbuildpack.FileExists(logsDirPath)
+	if err != nil {
 		return err
-	} else if !exists {
+	}
+
+	if !exists {
 		if err := os.MkdirAll(logsDirPath, os.ModePerm); err != nil {
 			s.Log.Error("could not create 'logs' directory: %v", err.Error())
 		}

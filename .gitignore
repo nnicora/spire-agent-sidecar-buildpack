@@ -1,1 +1,27 @@
-.idea
+# certificate files
+*.crt
+*.key
+*.srl
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+testbin/bin*
+
+cover.out
+vendor/
+
+# editor and IDE paraphernalia
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+
+# Useless Apple Finder files
+.DS_Store
+.vscode
