@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -25,32 +28,62 @@ func init() {
 }
 
 func main() {
-	for {
-		if c := ExtractSpireCredentials(); c != nil {
 
-			if spireAgentConfig != "" {
-				err := updateConfigFile(spireAgentConfig, func(s string) string {
-					s = strings.ReplaceAll(s, "server_address = \"\"", fmt.Sprintf("server_address = \"%s\"", c.Spire.Host))
-					s = strings.ReplaceAll(s, "server_port = 0", fmt.Sprintf("server_port = %d", c.Spire.Port))
-					return strings.ReplaceAll(s, "trust_domain = \"\"", fmt.Sprintf("trust_domain = \"%s\"", c.SpireTrustDomain()))
-				})
-				if err != nil {
-					logger.Printf("%v", err)
-				}
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+
+	go updater()
+
+	<-sigint
+}
+
+func updater() {
+	var reServerAddress = regexp.MustCompile(`server_address(?:.*)=(.*)`)
+	var reServerPort = regexp.MustCompile(`server_port(?:.*)=(.*)`)
+	var reTrustDomain = regexp.MustCompile(`trust_domain(?:.*)=(.*)`)
+
+	interval := time.Duration(syncInterval) * time.Second
+
+	ticker := time.NewTicker(interval)
+	for {
+		ticker.Reset(interval)
+
+		c, err := ExtractSpireCredentials()
+		if err != nil || c == nil {
+			select {
+			case <-ticker.C:
 			}
-			if envoyConfig != "" {
-				err := updateConfigFile(envoyConfig, func(s string) string {
-					return strings.ReplaceAll(s, "- name: \"SpiffeID\"", fmt.Sprintf("- name: \"%s\"", c.Workload.SpiffeID))
-				})
-				if err != nil {
-					logger.Printf("%v", err)
+
+			continue
+		}
+
+		if spireAgentConfig != "" {
+			err := updateConfigFile(spireAgentConfig, func(s string) string {
+
+				matches := reServerAddress.FindStringSubmatch(s)
+				if len(matches) > 0 {
+					s = strings.ReplaceAll(s, matches[0], fmt.Sprintf("server_address = \"%s\"", c.Spire.Host))
 				}
+
+				matches = reServerPort.FindStringSubmatch(s)
+				if len(matches) > 0 {
+					s = strings.ReplaceAll(s, matches[0], fmt.Sprintf("server_port = %d", c.Spire.Port))
+				}
+
+				matches = reTrustDomain.FindStringSubmatch(s)
+				if len(matches) > 0 {
+					s = strings.ReplaceAll(s, matches[0], fmt.Sprintf("trust_domain = \"%s\"", c.SpireTrustDomain()))
+				}
+
+				return s
+			})
+			if err != nil {
+				logger.Printf("couldn't update the spire agent configuration%v", err)
 			}
 		}
 
 		select {
-		case <-time.After(time.Duration(syncInterval) * time.Second):
-			//nothing
+		case <-ticker.C:
 		}
 	}
 }
@@ -61,20 +94,24 @@ func updateConfigFile(configFilePath string, f func(string) string) error {
 		return nil
 	}
 
-	if data, err := os.ReadFile(configFilePath); err != nil {
+	data, err := os.ReadFile(configFilePath)
+	if err != nil {
 		return fmt.Errorf("failed reading data from file: %v", err)
-	} else {
-		file, err := os.OpenFile(configFilePath, os.O_RDWR, 0644)
-		if err != nil {
-			return fmt.Errorf("failed opening file: %v", err)
-		} else {
-			strData := f(string(data))
-			_, err = file.WriteAt([]byte(strData), 0) // Write at 0 beginning
-			if err != nil {
-				return fmt.Errorf("failed writing to file: %v", err)
-			}
-			defer file.Close()
-			return nil
-		}
 	}
+
+	file, err := os.OpenFile(configFilePath, os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("failed opening file: %v", err)
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	strData := f(string(data))
+	_, err = file.WriteAt([]byte(strData), 0) // Write at 0 beginning
+	if err != nil {
+		return fmt.Errorf("failed writing to file: %v", err)
+	}
+
+	return nil
 }

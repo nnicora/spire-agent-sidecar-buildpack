@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	vcapEnv = "VCAP_SERVICES"
+	vcapEnv      = "VCAP_SERVICES"
+	spiffePrefix = "spiffe://"
 )
 
 type Instance struct {
@@ -33,8 +34,8 @@ type Spire struct {
 
 func (s *Credentials) SpireTrustDomain() string {
 	spiffeID := s.Workload.SpiffeID
-	if strings.HasPrefix(spiffeID, "spiffe://") {
-		spiffeID = strings.TrimPrefix(spiffeID, "spiffe://")
+	if strings.HasPrefix(spiffeID, spiffePrefix) {
+		spiffeID = strings.TrimPrefix(spiffeID, spiffePrefix)
 		return strings.Split(spiffeID, "/")[0]
 	}
 	return ""
@@ -59,20 +60,19 @@ func loadVCAP() (map[string][]*Instance, error) {
 	return data, nil
 }
 
-func ExtractSpireCredentials() *Credentials {
-	if d, err := loadVCAP(); err != nil {
-		logger.Printf("Error: %v", err)
-	} else {
-		for _, v := range d {
-			if len(v) > 0 {
-				for _, i := range v {
-					if i.Credentials != nil && i.Credentials.Spire != nil && i.Credentials.Workload != nil {
-						return i.Credentials
-					}
-				}
+func ExtractSpireCredentials() (*Credentials, error) {
+	vcap, err := loadVCAP()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range vcap {
+		for _, i := range v {
+			if i.Credentials != nil && i.Credentials.Spire != nil && i.Credentials.Workload != nil {
+				return i.Credentials, nil
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }
