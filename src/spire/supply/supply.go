@@ -18,9 +18,14 @@ const (
 	spireServerAddressEnv         = "SPIRE_SERVER_ADDRESS"
 	spireServerPortEnv            = "SPIRE_SERVER_PORT"
 	spireTrustDomainEnv           = "SPIRE_TRUST_DOMAIN"
+	spireBundlePathEnv            = "SPIRE_BUNDLE_PATH"
 	spireLogLevelEnv              = "SPIRE_LOG_LEVEL"
 	spireCloudFoundrySVIDStoreEnv = "SPIRE_CLOUDFOUNDRY_SVID_STORE"
 	svidKeyTypeEnv                = "SPIRE_AGENT_WORKLOAD_X509_SVID_KEY_TYPE"
+)
+
+const (
+	defaultBundlePathPattern = "/home/vcap/deps/%s/certificates/bundle.crt"
 )
 
 var (
@@ -236,8 +241,14 @@ func (s *Supplier) CreateSpireAgentConf(creds *Credentials) error {
 
 	ll := utils.EnvWithDefault(spireLogLevelEnv, "INFO")
 
+	bundlePath := utils.EnvWithDefault(spireBundlePathEnv, fmt.Sprintf(defaultBundlePathPattern, s.Stager.DepsIdx()))
+	if _, err := os.Stat(bundlePath); err != nil {
+		if os.IsNotExist(err) {
+			return err
+		}
+	}
 	data := map[string]interface{}{
-		"Idx":                s.Stager.DepsIdx(),
+		"BundlePath":         bundlePath,
 		"SpireServerAddress": ssa,
 		"SpireServerPort":    ssp,
 		"TrustDomain":        std,

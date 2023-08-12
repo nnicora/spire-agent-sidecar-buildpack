@@ -1,5 +1,15 @@
 .PHONY: tests
 
+VERSION:=$(shell cat VERSION)
+
+package: build-packager-image
+	docker run --rm -v "${PWD}:/src" -w /src buildpack-packager \
+	  buildpack-packager build --any-stack --cached
+	mv spire-agent_buildpack-cached-v${VERSION}.zip spire_agent_sidecar_buildpack.zip
+
+build-packager-image:
+	docker build -t buildpack-packager -f packager.Dockerfile .
+
 vet:
 	go vet ./...
 
