@@ -1,6 +1,7 @@
 package supply
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -242,11 +243,14 @@ func (s *Supplier) CreateSpireAgentConf(creds *Credentials) error {
 	ll := utils.EnvWithDefault(spireLogLevelEnv, "INFO")
 
 	bundlePath := utils.EnvWithDefault(spireBundlePathEnv, fmt.Sprintf(defaultBundlePathPattern, s.Stager.DepsIdx()))
-	if _, err := os.Stat(bundlePath); err != nil {
-		if os.IsNotExist(err) {
-			return err
-		}
+	fi, err := os.Stat(bundlePath)
+	if err != nil {
+		return err
 	}
+	if fi.IsDir() {
+		return errors.New("bundle path should point to a file")
+	}
+
 	data := map[string]interface{}{
 		"BundlePath":         bundlePath,
 		"SpireServerAddress": ssa,
