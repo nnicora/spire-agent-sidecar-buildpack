@@ -244,6 +244,7 @@ func (s *Supplier) CreateSpireAgentConf(creds *Credentials) error {
 	bundlePath := utils.EnvWithDefault(spireBundlePathEnv, fmt.Sprintf(defaultBundlePathPattern, s.Stager.DepsIdx()))
 	data := map[string]interface{}{
 		"BundlePath":         bundlePath,
+		"Idx":                s.Stager.DepsIdx(),
 		"SpireServerAddress": ssa,
 		"SpireServerPort":    ssp,
 		"TrustDomain":        std,
